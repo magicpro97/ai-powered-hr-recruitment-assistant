@@ -1,0 +1,16 @@
+SYNTHETIC FICTIONAL JOB DESCRIPTION
+
+Role: Software Engineer
+Organization: Example Product Lab, a fictional organization created for demonstration.
+
+Responsibilities:
+- Build and maintain Python web APIs and React user interfaces.
+- Review code, write focused automated tests, and document operational decisions.
+- Collaborate with product and design teammates on accessible workflows.
+
+Required skills:
+- Python, FastAPI, SQL, TypeScript, and React.
+- Experience with automated testing and version control.
+- Clear written communication and practical problem solving.
+
+This simulated vacancy is not associated with a real employer or hiring process.

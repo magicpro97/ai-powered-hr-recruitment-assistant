@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-hrapp}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      - POSTGRES_DB=${POSTGRES_DB:-hr_assistant}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hrapp} -d ${POSTGRES_DB:-hr_assistant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  clamav-freshclam:
+    image: clamav/clamav:1.4.5_base-debian
+    command: ["sh", "-c", "freshclam --stdout && chmod -R a+rX /var/lib/clamav"]
+    volumes:
+      - clamav_db:/var/lib/clamav
+    restart: "no"
+
+  clamav:
+    image: ghcr.io/rntrp/reefspect:v0.1.0
+    volumes:
+      - clamav_db:/var/lib/clamav:ro
+    restart: unless-stopped
+    depends_on:
+      clamav-freshclam:
+        condition: service_completed_successfully
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - ENV=production
+      - DEBUG=false
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
+      - OPENAI_MODEL=${OPENAI_MODEL:?Set OPENAI_MODEL in .env}
+      - CHROMA_PERSIST_DIR=/app/chroma_db
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+      - API_URL=${API_URL:-http://localhost:${BACKEND_PORT:-8000}}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-hrapp}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-hr_assistant}
+      - CLAMAV_URL=http://clamav:8000
+    volumes:
+      - chroma_db:/app/chroma_db
+      - uploads:/app/uploads
+      - memory:/app/memory
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health && curl -fsS http://clamav:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:${BACKEND_PORT:-8000}}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  chroma_db:
+  uploads:
+  memory:
+  postgres_data:
+  clamav_db:

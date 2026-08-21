@@ -1,0 +1,15 @@
+.git
+.env
+.venv
+.pytest_cache
+**/__pycache__
+**/*.py[cod]
+frontend/.next
+frontend/node_modules
+chroma_db
+uploads
+memory
+tests
+examples
+*.db
+*.log

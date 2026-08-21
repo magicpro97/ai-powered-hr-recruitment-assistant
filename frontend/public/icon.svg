@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0369A1"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <!-- Person silhouette (head) -->
+  <circle cx="256" cy="170" r="62" fill="white" opacity="0.95"/>
+  <!-- Person silhouette (shoulders) -->
+  <path d="M160 310 C160 262 210 230 256 230 C302 230 352 262 352 310 L352 330 C352 338 346 344 338 344 L174 344 C166 344 160 338 160 330 Z" fill="white" opacity="0.95"/>
+  <!-- AI sparkle dots -->
+  <circle cx="380" cy="120" r="16" fill="url(#accent)" opacity="0.9"/>
+  <circle cx="410" cy="170" r="10" fill="url(#accent)" opacity="0.7"/>
+  <circle cx="370" cy="180" r="8" fill="url(#accent)" opacity="0.5"/>
+  <!-- Checkmark badge -->
+  <circle cx="370" cy="360" r="52" fill="#10B981"/>
+  <path d="M345 360 L362 377 L395 344" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

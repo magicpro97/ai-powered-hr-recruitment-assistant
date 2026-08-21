@@ -1,0 +1,62 @@
+# ============================================
+# Stage 1: Build dependencies (has gcc/g++)
+# ============================================
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build-time system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the fully resolved dependency set.
+COPY requirements.lock.txt .
+RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock.txt
+
+# Pre-download ChromaDB ONNX embedding model during build
+ENV PYTHONPATH=/install/lib/python3.12/site-packages
+RUN python -c "from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2; ONNXMiniLM_L6_V2()(['warmup'])"
+
+# ============================================
+# Stage 2: Production runtime (no gcc/g++)
+# ============================================
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install runtime-only system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed Python packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy ONNX model cache from builder into the location ChromaDB expects.
+# ChromaDB uses $HOME/.cache/chroma; appuser home is /app so we target /app/.cache.
+RUN mkdir -p /app/.cache/chroma
+COPY --from=builder /root/.cache /app/.cache
+ENV ONNX_CACHE_DIR=/app/.cache
+
+# Copy only application code (not entire repo)
+COPY src/ ./src/
+COPY backend/ ./backend/
+
+# Create writable directories and set ownership for non-root user
+RUN mkdir -p /app/chroma_db /app/uploads /app/memory && \
+    chmod -R 775 /app/chroma_db /app/uploads /app/memory
+
+# Create non-root user and set ownership
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser && \
+    chown -R appuser:appuser /app/chroma_db /app/uploads /app/memory /app/.cache /app/src /app/backend
+
+EXPOSE 8000
+
+# Run as non-root
+USER appuser
+
+# Run the application (no --reload in production)
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

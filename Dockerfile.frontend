@@ -1,0 +1,57 @@
+# ============================================
+# Stage 1: Install dependencies
+# ============================================
+FROM oven/bun:1.3.9-alpine AS deps
+WORKDIR /app
+
+COPY frontend/package.json frontend/bun.lock ./
+RUN bun install --frozen-lockfile
+
+# ============================================
+# Stage 2: Build the application
+# ============================================
+FROM oven/bun:1.3.9-alpine AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ .
+
+# Build arguments for environment variables baked at build time
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Disable Next.js telemetry during build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN bun --bun next build
+
+# ============================================
+# Stage 3: Production runner (minimal)
+# ============================================
+FROM oven/bun:1.3.9-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nextjs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy standalone build output
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Set ownership
+RUN chown -R nextjs:nextjs /app
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["bun", "server.js"]

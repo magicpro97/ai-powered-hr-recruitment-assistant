@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+frontend/.next/
+frontend/node_modules/
+chroma_db/
+uploads/
+memory/
+*.db
+*.log
