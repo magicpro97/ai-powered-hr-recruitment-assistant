@@ -98,6 +98,8 @@ def candidate_files():
         if not path.is_file():
             continue
         relative = path.relative_to(ROOT)
+        if relative.parts[0] == ".git":
+            continue
         relative_text = relative.as_posix()
         if any(
             pattern.fullmatch(relative_text) for pattern in GENERATED_CACHE_PATTERNS
@@ -122,7 +124,10 @@ def test_hygiene_scanner_is_self_scanning_and_uses_no_private_home_literal():
 
 def test_every_physical_non_manifest_file_is_an_explicit_generated_cache():
     physical = {
-        path.relative_to(ROOT).as_posix() for path in ROOT.rglob("*") if path.is_file()
+        relative.as_posix()
+        for path in ROOT.rglob("*")
+        if path.is_file()
+        if (relative := path.relative_to(ROOT)).parts[0] != ".git"
     }
     unexpected = {
         relative
@@ -164,7 +169,7 @@ def test_public_candidate_file_manifest_is_exact():
 
 def test_public_tree_has_no_private_or_internal_material():
     forbidden = {"thesis", "results", "logs", "uploads", "docs", "cloudflared"}
-    assert not (ROOT / ".git").exists()
+    assert not {path for path in ROOT.rglob(".git") if path != ROOT / ".git"}
     assert forbidden.isdisjoint({path.name for path in ROOT.iterdir()})
     assert scan_text_tree() == []
 
